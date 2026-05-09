@@ -126,15 +126,14 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🤖 المُرسِل: {user.full_name}"
         + (f" (@{user.username})" if user.username else "")
-        + f"\n🆔 Telegram ID: `{user.id}`"
+        + f"🆔 Telegram ID: {user.id}"
     )
 
     try:
         await context.bot.send_message(
-            chat_id=CHANNEL_ID,
-            text=channel_message,
-            parse_mode="Markdown",
-        )
+    chat_id=CHANNEL_ID,
+    text=channel_message,
+)
     except Exception as e:
         logger.error(f"فشل إرسال الرسالة إلى القناة: {e}")
         await update.message.reply_text(
