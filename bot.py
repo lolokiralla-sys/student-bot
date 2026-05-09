@@ -15,7 +15,7 @@ from telegram.ext import (
 )
 
 # 🔐 حطي التوكن الجديد هنا
-BOT_TOKEN = "8144688124:AAFrRcQYVDwMfqDKA4WLvzuk-hLr_k0dXxA"
+BOT_TOKEN = "8764101661:AAHn3IS2EA-ZkGy6jk5or6EUKvaKvZdyttk"
 
 # 📢 معرف القناة (برايفيت أو عام)
 CHANNEL_ID = "-1003992977228"
