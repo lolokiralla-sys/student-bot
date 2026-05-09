@@ -14,8 +14,11 @@ from telegram.ext import (
     filters,
 )
 
-BOT_TOKEN   = "8144688124:AAG9lTbz_IHN3R3YfIfCq_FacVdu7fzgYQQ"
-CHANNEL_ID  = "-1003992977228"
+# 🔐 حطي التوكن الجديد هنا
+BOT_TOKEN = "8144688124:AAFrRcQYVDwMfqDKA4WLvzuk-hLr_k0dXxA"
+
+# 📢 معرف القناة (برايفيت أو عام)
+CHANNEL_ID = "-1003992977228"
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -68,10 +71,11 @@ async def get_student_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     context.user_data["student_id"] = student_id
 
     keyboard = [
-        [InlineKeyboardButton("🏢 إدارية",   callback_data="administrative")],
-        [InlineKeyboardButton("📚 أكاديمية",  callback_data="academic")],
-        [InlineKeyboardButton("📋 أخرى",      callback_data="other")],
+        [InlineKeyboardButton("🏢 إدارية", callback_data="administrative")],
+        [InlineKeyboardButton("📚 أكاديمية", callback_data="academic")],
+        [InlineKeyboardButton("📋 أخرى", callback_data="other")],
     ]
+
     await update.message.reply_text(
         "📂 *تصنيف المشكلة*\n\nيُرجى اختيار نوع مشكلتك:",
         parse_mode="Markdown",
@@ -82,9 +86,10 @@ async def get_student_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 CATEGORY_LABELS = {
     "administrative": "🏢 إدارية",
-    "academic":       "📚 أكاديمية",
-    "other":          "📋 أخرى",
+    "academic": "📚 أكاديمية",
+    "other": "📋 أخرى",
 }
+
 
 async def get_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
@@ -107,15 +112,15 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         await update.message.reply_text("⚠️ يُرجى وصف المشكلة بشكل أوضح (١٠ أحرف على الأقل).")
         return PROBLEM
 
-    user   = update.effective_user
-    data   = context.user_data
+    user = update.effective_user
+    data = context.user_data
 
     channel_message = (
         "📩 *شكوى جديدة*\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 *الاسم:*       {data.get('name', '—')}\n"
-        f"🆔 *رقم القيد:*   {data.get('student_id', '—')}\n"
-        f"📂 *التصنيف:*     {data.get('category', '—')}\n"
+        f"👤 *الاسم:* {data.get('name', '—')}\n"
+        f"🆔 *رقم القيد:* {data.get('student_id', '—')}\n"
+        f"📂 *التصنيف:* {data.get('category', '—')}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"📝 *المشكلة:*\n{problem}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -133,7 +138,7 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     except Exception as e:
         logger.error(f"فشل إرسال الرسالة إلى القناة: {e}")
         await update.message.reply_text(
-            "⚠️ حدث خطأ أثناء إرسال رسالتك. يُرجى التواصل مع الإدارة مباشرةً."
+            "⚠️ حدث خطأ أثناء إرسال رسالتك. يُرجى التأكد أن البوت أدمن في القناة."
         )
         return ConversationHandler.END
 
@@ -164,10 +169,10 @@ def main() -> None:
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            NAME:       [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
             STUDENT_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_student_id)],
-            CATEGORY:   [CallbackQueryHandler(get_category)],
-            PROBLEM:    [MessageHandler(filters.TEXT & ~filters.COMMAND, get_problem)],
+            CATEGORY: [CallbackQueryHandler(get_category)],
+            PROBLEM: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_problem)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
         allow_reentry=True,
@@ -176,7 +181,7 @@ def main() -> None:
     app.add_handler(conv_handler)
 
     logger.info("🤖 البوت يعمل الآن...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app.run_polling()
 
 
 if __name__ == "__main__":
