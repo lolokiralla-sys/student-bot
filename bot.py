@@ -19,7 +19,7 @@ from telegram.ext import (
 )
 
 # 🔐 التوكن
-BOT_TOKEN = "PUT_YOUR_NEW_TOKEN_HERE"
+BOT_TOKEN = "8764101661:AAHn3IS2EA-ZkGy6jk5or6EUKvaKvZdyttk"
 
 # 📢 القناة
 CHANNEL_ID = "-1003992977228"
