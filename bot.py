@@ -157,13 +157,14 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📩 شكوى جديدة #{ticket_id}
 ━━━━━━━━━━━━━━
 👤 الاسم: {complaint['name']}
-🆔 القيد: {complaint['student_id']}
-📂 النوع: {complaint['category']}
+🆔 رقم القيد: {complaint['student_id']}
+📂 التصنيف: {complaint['category']}
 ━━━━━━━━━━━━━━
 📝 المشكلة:
 {problem}
 ━━━━━━━━━━━━━━
-👤 المرسل: {user.full_name}
+🤖 المرسل: {user.full_name}
+🆔 Telegram ID: {user.id}
 """
 
     await context.bot.send_message(
