@@ -1,5 +1,5 @@
 """
-نظام شكاوي طلاب متكامل (إدارة + أرشفة + ترقيم)
+نظام شكاوي طلاب متكامل (إدارة + أرشفة + ترقيم + رقم هاتف)
 """
 
 import logging
@@ -19,21 +19,21 @@ from telegram.ext import (
 )
 
 # 🔐 التوكن
-BOT_TOKEN = "8764101661:AAHn3IS2EA-ZkGy6jk5or6EUKvaKvZdyttk"
+BOT_TOKEN = "PUT_YOUR_NEW_TOKEN_HERE"
 
 # 📢 القناة
 CHANNEL_ID = "-1003992977228"
 
-# 📂 ملفات التخزين
 DATA_FILE = "complaints.json"
 COUNTER_FILE = "counters.json"
 
 logging.basicConfig(level=logging.INFO)
 
-NAME, STUDENT_ID, CATEGORY, PROBLEM = range(4)
+# 👇 أضفنا PHONE
+NAME, STUDENT_ID, PHONE, CATEGORY, PROBLEM = range(5)
 
 # =========================
-# 🧠 التخزين والأرشفة
+# 💾 التخزين
 # =========================
 
 def load_data():
@@ -57,12 +57,22 @@ def save_counters(data):
         json.dump(data, f)
 
 # =========================
-# 🚀 البداية
+# 🚀 البداية (معدلة)
 # =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    welcome_text = (
+        "🎓 أهلاً بك في بوابة شؤون الطلبة\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📩 منصة رسمية لاستقبال الشكاوي والملاحظات\n"
+        "🏛️ تتم متابعة جميع الطلبات من قبل مكتب شؤون الطلبة\n"
+        "⏳ مع ضمان السرعة والتنظيم في المعالجة وسرية المعلومات\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "📌 الرجاء إدخال اسمك الكامل"
+    )
+
     await update.message.reply_text(
-        "🎓 أهلاً بك في نظام الشكاوي\nاكتب اسمك الكامل للبدء:",
+        welcome_text,
         reply_markup=ReplyKeyboardRemove()
     )
     return NAME
@@ -82,6 +92,22 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_student_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["student_id"] = update.message.text
+
+    await update.message.reply_text("📞 أدخل رقم هاتفك:")
+    return PHONE
+
+# =========================
+# 📞 رقم الهاتف (جديد)
+# =========================
+
+async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    phone = update.message.text.strip()
+
+    if len(phone) < 8:
+        await update.message.reply_text("⚠️ أدخل رقم هاتف صحيح")
+        return PHONE
+
+    context.user_data["phone"] = phone
 
     keyboard = [
         [InlineKeyboardButton("🏢 إداري", callback_data="administrative")],
@@ -115,9 +141,7 @@ async def get_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    cat = query.data
-    context.user_data["category"] = cat
-
+    context.user_data["category"] = query.data
     await query.edit_message_text("✍️ اكتب تفاصيل المشكلة:")
     return PROBLEM
 
@@ -142,6 +166,7 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "ticket": ticket_id,
         "name": data["name"],
         "student_id": data["student_id"],
+        "phone": data.get("phone"),
         "category": CATEGORY_LABELS[cat],
         "problem": problem,
         "user_id": user.id,
@@ -158,6 +183,7 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ━━━━━━━━━━━━━━
 👤 الاسم: {complaint['name']}
 🆔 رقم القيد: {complaint['student_id']}
+📞 رقم الهاتف: {complaint['phone']}
 📂 التصنيف: {complaint['category']}
 ━━━━━━━━━━━━━━
 📝 المشكلة:
@@ -173,7 +199,7 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     await update.message.reply_text(
-    f"""
+        f"""
 ✅ تم تسجيل شكواك بنجاح
 
 📌 كود الشكوى: {ticket_id}
@@ -183,7 +209,7 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🙏 شكراً لتواصلك معنا
 """
-)
+    )
 
     context.user_data.clear()
     return ConversationHandler.END
@@ -198,7 +224,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # =========================
-# 📊 إدارة (للمشرف)
+# 📊 إحصائيات
 # =========================
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -206,7 +232,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"📊 عدد الشكاوي: {len(data)}")
 
 # =========================
-# 🚀 تشغيل البوت
+# 🚀 التشغيل
 # =========================
 
 def main():
@@ -217,6 +243,7 @@ def main():
         states={
             NAME: [MessageHandler(filters.TEXT, get_name)],
             STUDENT_ID: [MessageHandler(filters.TEXT, get_student_id)],
+            PHONE: [MessageHandler(filters.TEXT, get_phone)],
             CATEGORY: [CallbackQueryHandler(get_category)],
             PROBLEM: [MessageHandler(filters.TEXT, get_problem)],
         },
