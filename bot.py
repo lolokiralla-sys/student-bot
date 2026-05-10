@@ -1,5 +1,5 @@
 """
-نظام شكاوي طلاب متكامل (لوحة تحكم + إشعارات + أرشفة)
+نظام شكاوي طلاب متكامل (إدارة + أرشفة + ترقيم)
 """
 
 import logging
@@ -7,12 +7,7 @@ import json
 import os
 from datetime import datetime
 
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    ReplyKeyboardRemove,
-)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -29,6 +24,7 @@ BOT_TOKEN = "8764101661:AAHn3IS2EA-ZkGy6jk5or6EUKvaKvZdyttk"
 # 📢 القناة
 CHANNEL_ID = "-1003992977228"
 
+# 📂 ملفات التخزين
 DATA_FILE = "complaints.json"
 COUNTER_FILE = "counters.json"
 
@@ -37,7 +33,7 @@ logging.basicConfig(level=logging.INFO)
 NAME, STUDENT_ID, CATEGORY, PROBLEM = range(4)
 
 # =========================
-# 💾 تخزين
+# 🧠 التخزين والأرشفة
 # =========================
 
 def load_data():
@@ -60,19 +56,13 @@ def save_counters(data):
     with open(COUNTER_FILE, "w") as f:
         json.dump(data, f)
 
-def find_complaint(data, ticket):
-    for c in data:
-        if c["ticket"] == ticket:
-            return c
-    return None
-
 # =========================
 # 🚀 البداية
 # =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🎓 اكتب اسمك للبدء:",
+        "🎓 أهلاً بك في نظام الشكاوي\nاكتب اسمك الكامل للبدء:",
         reply_markup=ReplyKeyboardRemove()
     )
     return NAME
@@ -83,11 +73,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
-    await update.message.reply_text("📌 رقم القيد:")
+    await update.message.reply_text("📌 اكتب رقم القيد:")
     return STUDENT_ID
 
 # =========================
-# 🆔 القيد
+# 🆔 رقم القيد
 # =========================
 
 async def get_student_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -125,12 +115,14 @@ async def get_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    context.user_data["category"] = query.data
-    await query.edit_message_text("✍️ اكتب المشكلة بالتفصيل:")
+    cat = query.data
+    context.user_data["category"] = cat
+
+    await query.edit_message_text("✍️ اكتب تفاصيل المشكلة:")
     return PROBLEM
 
 # =========================
-# 📝 إرسال الشكوى
+# 📝 المشكلة + إرسال
 # =========================
 
 async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -154,107 +146,55 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "problem": problem,
         "user_id": user.id,
         "username": user.username,
-        "time": str(datetime.now()),
-        "status": "🟡 قيد المعالجة"
+        "time": str(datetime.now())
     }
 
-    db = load_data()
-    db.append(complaint)
-    save_data(db)
+    all_data = load_data()
+    all_data.append(complaint)
+    save_data(all_data)
 
-    msg = f"""
-📩 شكوى #{ticket_id}
-👤 {complaint['name']}
-📂 {complaint['category']}
-📝 {problem}
+    message = f"""
+📩 شكوى جديدة #{ticket_id}
+━━━━━━━━━━━━━━
+👤 الاسم: {complaint['name']}
+🆔 القيد: {complaint['student_id']}
+📂 النوع: {complaint['category']}
+━━━━━━━━━━━━━━
+📝 المشكلة:
+{problem}
+━━━━━━━━━━━━━━
+👤 المرسل: {user.full_name}
 """
 
-    await context.bot.send_message(chat_id=CHANNEL_ID, text=msg)
+    await context.bot.send_message(
+        chat_id=CHANNEL_ID,
+        text=message
+    )
 
-    await update.message.reply_text(f"✅ تم تسجيل الشكوى: {ticket_id}")
+    await update.message.reply_text(f"✅ تم تسجيل شكواك برقم: {ticket_id}")
 
     context.user_data.clear()
     return ConversationHandler.END
 
 # =========================
-# 🧑‍💼 لوحة التحكم (عرض الشكاوى)
+# ❌ إلغاء
 # =========================
 
-async def panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    await update.message.reply_text("تم الإلغاء")
+    return ConversationHandler.END
+
+# =========================
+# 📊 إدارة (للمشرف)
+# =========================
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
-
-    if not data:
-        await update.message.reply_text("لا توجد شكاوى")
-        return
-
-    for c in data[-10:]:  # آخر 10 شكاوى
-        keyboard = [
-            [
-                InlineKeyboardButton("🟢 حل", callback_data=f"resolve:{c['ticket']}"),
-                InlineKeyboardButton("🔴 رفض", callback_data=f"reject:{c['ticket']}"),
-            ],
-            [
-                InlineKeyboardButton("📌 قيد", callback_data=f"pending:{c['ticket']}"),
-            ]
-        ]
-
-        text = f"""
-📩 {c['ticket']}
-👤 {c['name']}
-📂 {c['category']}
-📊 {c['status']}
-"""
-
-        await update.message.reply_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    await update.message.reply_text(f"📊 عدد الشكاوي: {len(data)}")
 
 # =========================
-# 🔄 تغيير الحالة + إشعار الطالب
-# =========================
-
-async def handle_actions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    action, ticket = query.data.split(":")
-    data = load_data()
-
-    c = find_complaint(data, ticket)
-    if not c:
-        await query.edit_message_text("غير موجودة")
-        return
-
-    user_id = c["user_id"]
-
-    if action == "resolve":
-        c["status"] = "🟢 تم الحل"
-        status_text = "تم حل الشكوى"
-
-    elif action == "reject":
-        c["status"] = "🔴 مرفوضة"
-        status_text = "تم رفض الشكوى"
-
-    elif action == "pending":
-        c["status"] = "🟡 قيد المعالجة"
-        status_text = "قيد المعالجة"
-
-    save_data(data)
-
-    # 📢 إشعار الطالب
-    try:
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"📢 تحديث شكواك #{ticket}\n📊 الحالة: {status_text}"
-        )
-    except:
-        pass
-
-    await query.edit_message_text(f"{ticket} → {status_text}")
-
-# =========================
-# 🚀 تشغيل
+# 🚀 تشغيل البوت
 # =========================
 
 def main():
@@ -268,18 +208,13 @@ def main():
             CATEGORY: [CallbackQueryHandler(get_category)],
             PROBLEM: [MessageHandler(filters.TEXT, get_problem)],
         },
-        fallbacks=[],
+        fallbacks=[CommandHandler("cancel", cancel)],
     )
 
     app.add_handler(conv)
+    app.add_handler(CommandHandler("stats", stats))
 
-    # 🧑‍💼 لوحة التحكم
-    app.add_handler(CommandHandler("panel", panel))
-
-    # 🔄 أزرار الإدارة
-    app.add_handler(CallbackQueryHandler(handle_actions))
-
-    print("Bot running...")
+    print("Bot is running...")
     app.run_polling()
 
 if __name__ == "__main__":
