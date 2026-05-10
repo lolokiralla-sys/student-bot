@@ -172,7 +172,18 @@ async def get_problem(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text=message
     )
 
-    await update.message.reply_text(f"✅ تم تسجيل شكواك برقم: {ticket_id}")
+    await update.message.reply_text(
+    f"""
+✅ تم تسجيل شكواك بنجاح
+
+📌 كود الشكوى: {ticket_id}
+
+📩 سيتم مراجعة الشكوى من قبل الأعضاء
+⏳ وسيتم التواصل معك في أقرب فرصة
+
+🙏 شكراً لتواصلك معنا
+"""
+)
 
     context.user_data.clear()
     return ConversationHandler.END
